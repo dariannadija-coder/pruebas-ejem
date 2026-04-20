@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Generador de Prompts</title>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F7F5F0;
+      --surface: #FFFFFF;
+      --border: #E2DDD5;
+      --text: #1A1714;
+      --muted: #7A7368;
+      --accent: #2D5A3D;
+      --accent-light: #EAF2EC;
+      --accent-mid: #5A9E70;
+      --warm: #C4622D;
+      --warm-light: #FAF0EB;
+      --blue: #2B4F8C;
+      --blue-light: #EBF0FA;
+      --amber: #A0620E;
+      --amber-light: #FDF3E3;
+      --purple: #5B3E8C;
+      --purple-light: #F2EEFC;
+      --radius: 12px;
+      --radius-sm: 8px;
+      --shadow: 0 1px 3px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.04);
+    }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 2rem 1rem 4rem;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2.5rem;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    header h1 {
+      font-family: 'DM Serif Display', serif;
+      font-size: clamp(2rem, 5vw, 3rem);
+      color: var(--text);
+      line-height: 1.1;
+      margin-bottom: 0.5rem;
+    }
+
+    header h1 em {
+      color: var(--accent);
+      font-style: italic;
+    }
+
+    header p {
+      font-size: 0.95rem;
+      color: var(--muted);
+      font-weight: 300;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    .blocks {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 1rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .block {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.1rem 1.25rem;
+      box-shadow: var(--shadow);
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .block:nth-child(1) { animation-delay: 0.05s; }
+    .block:nth-child(2) { animation-delay: 0.10s; }
+    .block:nth-child(3) { animation-delay: 0.15s; }
+    .block:nth-child(4) { animation-delay: 0.20s; }
+    .block:nth-child(5) { animation-delay: 0.25s; }
+
+    .block-label {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.75rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.15s ease;
+      user-select: none;
+      font-family: 'DM Sans', sans-serif;
+    }
+
+    .chip:hover {
+      border-color: #B0A898;
+      color: var(--text);
+    }
+
+    .chip.active-purple { background: var(--purple-light); border-color: #9B7FD4; color: var(--purple); font-weight: 500; }
+    .chip.active-green  { background: var(--accent-light); border-color: var(--accent-mid); color: var(--accent); font-weight: 500; }
+    .chip.active-warm   { background: var(--warm-light); border-color: #E0835A; color: var(--warm); font-weight: 500; }
+    .chip.active-blue   { background: var(--blue-light); border-color: #6B8FCE; color: var(--blue); font-weight: 500; }
+    .chip.active-amber  { background: var(--amber-light); border-color: #D4943A; color: var(--amber); font-weight: 500; }
+
+    .custom-input {
+      width: 100%;
+      margin-top: 8px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 7px 10px;
+      font-size: 0.8rem;
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      outline: none;
+      transition: border-color 0.15s;
+    }
+    .custom-input:focus { border-color: var(--accent-mid); }
+    .custom-input::placeholder { color: #B0A898; }
+
+    .result-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.4rem 1.5rem;
+      margin-bottom: 1rem;
+      box-shadow: var(--shadow);
+      min-height: 90px;
+      animation: fadeUp 0.5s 0.3s ease both;
+    }
+
+    .result-label {
+      font-size: 0.72rem;
+      font-weight: 500;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .result-text {
+      font-family: 'DM Serif Display', serif;
+      font-size: 1.05rem;
+      line-height: 1.65;
+      color: var(--text);
+    }
+
+    .result-placeholder {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      color: #B0A898;
+      font-style: italic;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      animation: fadeUp 0.5s 0.35s ease both;
+    }
+
+    button {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.83rem;
+      padding: 8px 18px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    button:hover { background: var(--bg); border-color: #B0A898; }
+    button:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover { background: #244d33; border-color: #244d33; }
+
+    .btn-copied {
+      background: var(--accent-light) !important;
+      border-color: var(--accent-mid) !important;
+      color: var(--accent) !important;
+    }
+
+    footer {
+      text-align: center;
+      margin-top: 3rem;
+      font-size: 0.75rem;
+      color: #C0BAB2;
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Generador de <em>prompts</em></h1>
+      <p>Construye tu pregunta para la IA paso a paso</p>
+    </header>
+
+    <div class="blocks">
+
+      <div class="block">
+        <div class="block-label">
+          <span class="dot" style="background:#9B7FD4"></span>
+          Rol de la IA
+        </div>
+        <div class="chips" id="chips-rol">
+          <span class="chip" data-group="rol" data-val="Actúa como un profesor experto en">Profesor</span>
+          <span class="chip" data-group="rol" data-val="Eres un tutor paciente especializado en">Tutor</span>
+          <span class="chip" data-group="rol" data-val="Actúa como un científico especializado en">Científico</span>
+          <span class="chip" data-group="rol" data-val="Eres un periodista experto en">Periodista</span>
+          <span class="chip" data-group="rol" data-val="Actúa como un escritor creativo especializado en">Escritor</span>
+          <span class="chip" data-group="rol" data-val="Eres un experto en">Experto</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-label">
+          <span class="dot" style="background:#5A9E70"></span>
+          Tema
+        </div>
+        <div class="chips" id="chips-tema">
+          <span class="chip" data-group="tema" data-val="historia">Historia</span>
+          <span class="chip" data-group="tema" data-val="matemáticas">Matemáticas</span>
+          <span class="chip" data-group="tema" data-val="ciencias naturales">Ciencias</span>
+          <span class="chip" data-group="tema" data-val="lengua y literatura">Lengua</span>
+          <span class="chip" data-group="tema" data-val="tecnología">Tecnología</span>
+          <span class="chip" data-group="tema" data-val="arte">Arte</span>
+          <span class="chip" data-group="tema" data-val="filosofía">Filosofía</span>
+        </div>
+        <input class="custom-input" id="custom-tema" placeholder="O escribe tu propio tema…" />
+      </div>
+
+      <div class="block">
+        <div class="block-label">
+          <span class="dot" style="background:#E0835A"></span>
+          Tarea
+        </div>
+        <div class="chips" id="chips-tarea">
+          <span class="chip" data-group="tarea" data-val="Explícame">Explicar</span>
+          <span class="chip" data-group="tarea" data-val="Resume">Resumir</span>
+          <span class="chip" data-group="tarea" data-val="Compara">Comparar</span>
+          <span class="chip" data-group="tarea" data-val="Dame 5 ejemplos de">Ejemplos</span>
+          <span class="chip" data-group="tarea" data-val="Crea un ejercicio sobre">Ejercicio</span>
+          <span class="chip" data-group="tarea" data-val="Analiza">Analizar</span>
+          <span class="chip" data-group="tarea" data-val="Debate los pros y contras de">Debatir</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-label">
+          <span class="dot" style="background:#6B8FCE"></span>
+          Formato de respuesta
+        </div>
+        <div class="chips" id="chips-formato">
+          <span class="chip" data-group="formato" data-val="en una lista clara">Lista</span>
+          <span class="chip" data-group="formato" data-val="en un párrafo corto">Párrafo</span>
+          <span class="chip" data-group="formato" data-val="paso a paso">Paso a paso</span>
+          <span class="chip" data-group="formato" data-val="con una analogía sencilla">Con analogía</span>
+          <span class="chip" data-group="formato" data-val="en forma de tabla comparativa">Tabla</span>
+          <span class="chip" data-group="formato" data-val="con un ejemplo práctico">Con ejemplo</span>
+        </div>
+      </div>
+
+      <div class="block">
+        <div class="block-label">
+          <span class="dot" style="background:#D4943A"></span>
+          Nivel del alumno
+        </div>
+        <div class="chips" id="chips-nivel">
+          <span class="chip" data-group="nivel" data-val="para un alumno de primaria">Primaria</span>
+          <span class="chip" data-group="nivel" data-val="para un alumno de secundaria">Secundaria</span>
+          <span class="chip" data-group="nivel" data-val="para un alumno de bachillerato">Bachillerato</span>
+          <span class="chip" data-group="nivel" data-val="para un estudiante universitario">Universidad</span>
+          <span class="chip" data-group="nivel" data-val="para alguien sin conocimientos previos">Sin base</span>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="result-box">
+      <div class="result-label">Tu prompt generado</div>
+      <div class="result-text" id="prompt-output">
+        <span class="result-placeholder">Selecciona opciones arriba para construir tu prompt…</span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button id="btn-reset">Limpiar todo</button>
+      <button id="btn-copy">Copiar prompt</button>
+      <button class="btn-primary" id="btn-chatgpt">Abrir en ChatGPT →</button>
+    </div>
+
+    <footer>Generador de prompts para el aula &mdash; uso libre</footer>
+  </div>
+
+  <script>
+    const colorMap = { rol: 'active-purple', tema: 'active-green', tarea: 'active-warm', formato: 'active-blue', nivel: 'active-amber' };
+    const state = { rol: '', tema: '', tarea: '', formato: '', nivel: '' };
+
+    function buildPrompt() {
+      const { rol, tema, tarea, formato, nivel } = state;
+      const parts = [];
+      if (rol && tema) parts.push(rol + ' ' + tema + '.');
+      else if (rol) parts.push(rol + ' este tema.');
+      if (tarea && tema) parts.push(tarea + ' ' + tema);
+      else if (tarea) parts.push(tarea + ' esto');
+      if (formato) parts.push(formato);
+      if (nivel) parts.push(nivel);
+      if (!parts.length) return '';
+      let p = parts.join(', ');
+      if (!p.endsWith('.')) p += '.';
+      return p.charAt(0).toUpperCase() + p.slice(1);
+    }
+
+    function render() {
+      const p = buildPrompt();
+      const el = document.getElementById('prompt-output');
+      el.innerHTML = p
+        ? p
+        : '<span class="result-placeholder">Selecciona opciones arriba para construir tu prompt…</span>';
+    }
+
+    document.querySelectorAll('.chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        const group = chip.dataset.group;
+        const cls = colorMap[group];
+        const was = chip.classList.contains(cls);
+        document.querySelectorAll(`.chip[data-group="${group}"]`).forEach(c => c.classList.remove(cls));
+        if (!was) { chip.classList.add(cls); state[group] = chip.dataset.val; }
+        else state[group] = '';
+        if (group === 'tema') document.getElementById('custom-tema').value = '';
+        render();
+      });
+    });
+
+    document.getElementById('custom-tema').addEventListener('input', function () {
+      const v = this.value.trim();
+      document.querySelectorAll('.chip[data-group="tema"]').forEach(c => c.classList.remove('active-green'));
+      state.tema = v;
+      render();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      Object.keys(state).forEach(k => state[k] = '');
+      document.querySelectorAll('.chip').forEach(c => {
+        Object.values(colorMap).forEach(cls => c.classList.remove(cls));
+      });
+      document.getElementById('custom-tema').value = '';
+      render();
+    });
+
+    document.getElementById('btn-copy').addEventListener('click', () => {
+      const p = buildPrompt();
+      if (!p) return;
+      navigator.clipboard.writeText(p).then(() => {
+        const btn = document.getElementById('btn-copy');
+        btn.textContent = '¡Copiado!';
+        btn.classList.add('btn-copied');
+        setTimeout(() => { btn.textContent = 'Copiar prompt'; btn.classList.remove('btn-copied'); }, 2000);
+      });
+    });
+
+    document.getElementById('btn-chatgpt').addEventListener('click', () => {
+      const p = buildPrompt();
+      if (!p) return;
+      const url = 'https://chatgpt.com/?q=' + encodeURIComponent(p);
+      window.open(url, '_blank');
+    });
+  </script>
+</body>
+</html>
